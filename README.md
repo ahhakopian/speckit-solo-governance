@@ -241,6 +241,7 @@ separate prerequisites. This path uses SpecKit's native local component
 installation and requires no release, tag, catalog, Bundle, or Workflow.
 
 ```bash
+mkdir -p ~/src
 git clone --depth 1 https://github.com/ahhakopian/speckit-solo-governance.git ~/src/speckit-solo-governance
 
 specify extension add --dev ~/src/speckit-solo-governance/foundation --priority 20
