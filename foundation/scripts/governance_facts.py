@@ -162,7 +162,8 @@ def require_approval(project: Path, data: dict, boundary: str, subject: str = "f
     if boundary in {"project-ready", "human-acceptance"}:
         require_approval(project, data, "architecture")
         baseline = project_file(project, "architecture/baseline.md").read_text()
-        if re.findall(r"(?m)^Status: (Draft|Approved)[ \t]*$", baseline) != ["Approved"]:
+        statuses = re.findall(r"(?m)^(?:Status:|\*\*Status:\*\*)[ \t]*([^\r\n]*)$", baseline)
+        if len(statuses) != 1 or not re.fullmatch(r"Approved(?:[ \t]+[^\r\n]*)?", statuses[0]):
             raise FactError("Architecture Baseline must be explicitly Approved")
     if boundary == "human-acceptance":
         require_approval(project, data, "project-ready")

@@ -97,11 +97,25 @@ class GovernanceFactTests(FactFixture, TestCase):
         with self.assertRaises(facts.FactError):
             facts.require_approval(self.project, self.data, "prd")
 
-    def test_draft_or_duplicate_baseline_status_blocks_project_ready(self):
-        for status in ("Status: Draft\n", "Status: Approved\nStatus: Draft\n"):
-            self.write("architecture/baseline.md", status + "Revision: 1\nContract A.\n")
-            with self.assertRaisesRegex(facts.FactError, "explicitly Approved"):
+    def test_approved_baseline_status_forms_allow_project_ready(self):
+        for status in ("Status: Approved\n", "**Status:** Approved\n",
+                       "**Status:** Approved on 2026-09-30 by explicit human approval.\n"):
+            with self.subTest(status=status):
+                self.write("architecture/baseline.md", status + "Revision: 1\nContract A.\n")
+                self.approve("architecture")
+                self.approve("project-ready")
                 facts.require_approval(self.project, self.data, "project-ready")
+
+    def test_nonapproved_or_duplicate_baseline_status_blocks_project_ready(self):
+        for status in ("Status: Draft\n", "**Status:** Draft\n", "Status: Rejected\n",
+                       "Status: Approved\nStatus: Draft\n",
+                       "Status: Approved\n**Status:** Rejected\n"):
+            with self.subTest(status=status):
+                self.write("architecture/baseline.md", status + "Revision: 1\nContract A.\n")
+                self.approve("architecture")
+                self.approve("project-ready")
+                with self.assertRaisesRegex(facts.FactError, "explicitly Approved"):
+                    facts.require_approval(self.project, self.data, "project-ready")
 
     def test_schema_rejects_workflow_state_and_history(self):
         for field in ("run_id", "current_stage", "reviews", "history", "status", "checklist_skipped"):
