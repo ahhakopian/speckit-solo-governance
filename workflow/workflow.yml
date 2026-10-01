@@ -1,0 +1,170 @@
+schema_version: "1.0"
+
+workflow:
+  id: "greenfield-bootstrap"
+  name: "Greenfield Bootstrap"
+  version: "0.5.0"
+  author: "Local Governance"
+  description: "Govern a Canonical PRD and establish the approved project foundation."
+
+requires:
+  speckit_version: ">=0.16.2,<0.17.0"
+
+inputs:
+  canonical_prd:
+    type: string
+    required: true
+    prompt: "Project-relative path to the Canonical PRD"
+  integration:
+    type: string
+    default: "auto"
+    prompt: "Integration to use; 'auto' uses the project's initialized integration"
+  prd_gate_decision:
+    type: string
+    default: ""
+    enum: ["", "approve", "reject"]
+  prd_decision:
+    type: string
+    default: ""
+  prd_comment:
+    type: string
+    default: ""
+  architecture_approval:
+    type: string
+    default: ""
+    enum: ["", "approve", "reject"]
+  project_ready_decision:
+    type: string
+    default: ""
+    enum: ["", "approve", "reject"]
+
+steps:
+  - id: prd-convergence
+    timeout: 900
+    type: do-while
+    condition: false
+    max_iterations: 1
+    steps:
+      - id: prepare-prd-review
+        timeout: 900
+        type: shell
+        run: python3 "$SPECKIT_WORKFLOW_DIR/governance.py" prepare "{{ context.run_id }}"
+        output_format: json
+      - id: apply-prd-resolution
+        timeout: 900
+        type: prompt
+        integration: "{{ inputs.integration }}"
+        prompt: |-
+          Invoke the installed `speckit.greenfield-foundation.prd` command using the normal agent invocation.
+          Supply the following literal input data; apply only the requested operation:
+          operation=reconcile canonical_prd="{{ inputs.canonical_prd }}" decision="{{ steps.prepare-prd-review.output.data.decision }}" comment="{{ steps.prepare-prd-review.output.data.comment }}" authorization=workflow
+
+      - id: start-prd-review
+        timeout: 900
+        type: shell
+        run: python3 "$SPECKIT_WORKFLOW_DIR/governance.py" start_review "{{ context.run_id }}"
+        output_format: json
+      - id: govern-prd
+        timeout: 900
+        type: prompt
+        integration: "{{ inputs.integration }}"
+        prompt: |-
+          Invoke the installed `speckit.greenfield-foundation.prd` command using the normal agent invocation.
+          Supply the following literal input data; apply only the requested operation:
+          operation=review canonical_prd="{{ inputs.canonical_prd }}" submission=".specify/workflows/runs/{{ context.run_id }}/prd-review-submission.json" facts=".specify/workflows/runs/{{ context.run_id }}/prd-governance.json" authorization=workflow
+
+      - id: record-prd-review
+        timeout: 900
+        type: shell
+        run: python3 "$SPECKIT_WORKFLOW_DIR/governance.py" record "{{ context.run_id }}"
+        output_format: json
+
+      - id: route-prd-review
+        timeout: 900
+        type: if
+        condition: "{{ steps.record-prd-review.output.data.can_approve }}"
+        then:
+          - id: prd-governance-gate
+            timeout: 900
+            type: gate
+            message: "{{ steps.record-prd-review.output.data.human_message }}"
+            options: [approve, reject]
+            on_reject: retry
+            verdict_input: prd_gate_decision
+        else:
+          - id: prd-product-decision
+            timeout: 900
+            type: gate
+            message: "{{ steps.record-prd-review.output.data.human_message }}"
+            options: [reject]
+            on_reject: retry
+            verdict_input: prd_gate_decision
+
+      - id: verify-prd-approval
+        timeout: 900
+        type: shell
+        run: python3 "$SPECKIT_WORKFLOW_DIR/governance.py" verify "{{ context.run_id }}"
+        output_format: json
+  - id: derive-review-architecture
+    timeout: 900
+    type: prompt
+    integration: "{{ inputs.integration }}"
+    prompt: |-
+      Invoke the installed `speckit.greenfield-foundation.architecture` command using the normal agent invocation.
+      Supply the following literal input data; apply only the requested operation:
+      canonical_prd="{{ inputs.canonical_prd }}" authorization=workflow
+
+  - id: approve-architecture
+    timeout: 900
+    type: gate
+    message: >-
+      Review the Draft TARGET Architecture, including every material choice and
+      its consequences. Approve explicitly to adopt the complete draft as the
+      project Architecture Baseline; reject if a PRODUCT GAP, unresolved
+      material decision, PRD conflict, or architecture defect remains.
+    show_file: "architecture/baseline.md"
+    options: [approve, reject]
+    on_reject: abort
+    verdict_input: architecture_approval
+  - id: publish-baseline-and-roadmap
+    timeout: 900
+    type: prompt
+    integration: "{{ inputs.integration }}"
+    prompt: |-
+      Invoke the installed `speckit.greenfield-foundation.roadmap` command using the normal agent invocation.
+      Supply the following literal input data; apply only the requested operation:
+      canonical_prd="{{ inputs.canonical_prd }}" authorization=workflow architecture_approval="{{ steps.approve-architecture.output.choice }}"
+
+  - id: establish-constitution
+    timeout: 900
+    command: speckit.greenfield-foundation.project-ready
+    integration: "{{ inputs.integration }}"
+    input:
+      args: >-
+        operation=constitution canonical_prd="{{ inputs.canonical_prd }}" authorization=workflow
+  - id: verify-project-ready
+    timeout: 900
+    type: prompt
+    integration: "{{ inputs.integration }}"
+    prompt: |-
+      Invoke the installed `speckit.greenfield-foundation.project-ready` command using the normal agent invocation.
+      Supply the following literal input data; apply only the requested operation:
+      operation=verify canonical_prd="{{ inputs.canonical_prd }}" authorization=workflow
+
+  - id: project-ready
+    timeout: 900
+    type: gate
+    message: >-
+      Approve PROJECT READY only if the preceding verification reported PROJECT
+      READY with no unresolved product, architecture, ROADMAP, or Constitution
+      conflict. This approval authorizes initial readiness for the published
+      ROADMAP. Reject to stop foundation completion.
+    options: [approve, reject]
+    on_reject: abort
+    verdict_input: project_ready_decision
+
+  - id: initialize-roadmap-readiness
+    timeout: 900
+    type: shell
+    run: python3 .specify/extensions/greenfield-roadmap-lifecycle/scripts/roadmap_lifecycle.py initial "{{ context.run_id }}"
+    output_format: json

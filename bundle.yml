@@ -1,0 +1,40 @@
+schema_version: "1.0"
+
+bundle:
+  id: "speckit-greenfield-governance"
+  name: "SpecKit Greenfield Governance"
+  version: "0.7.0"
+  role: "distribution"
+  description: "Native distribution and composition of Greenfield Governance components."
+  author: "Local Governance"
+  license: "MIT"
+
+requires:
+  speckit_version: ">=0.16.2,<0.17.0"
+
+provides:
+  extensions:
+    - id: "greenfield-foundation"
+      version: "0.1.0"
+    - id: "feature-governance-guard"
+      version: "1.0.1"
+    - id: "greenfield-roadmap-lifecycle"
+      version: "0.2.0"
+
+  presets:
+    - id: "feature-governance"
+      version: "1.0.1"
+      priority: 10
+      strategy: "prepend"
+    - id: "greenfield-governance"
+      version: "0.4.1"
+      priority: 20
+      strategy: "append"
+
+  workflows:
+    - id: "greenfield-bootstrap"
+      version: "0.5.0"
+
+tags:
+  - "greenfield"
+  - "governance"

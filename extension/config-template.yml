@@ -1,0 +1,3 @@
+# Existing installations keep automatic completion unless explicitly changed.
+completion_mode: automatic
+approval_registry: .specify/governance/hitl.json

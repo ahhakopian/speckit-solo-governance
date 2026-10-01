@@ -1,0 +1,38 @@
+schema_version: "1.0"
+
+extension:
+  id: "greenfield-roadmap-lifecycle"
+  name: "Greenfield ROADMAP Lifecycle"
+  version: "0.2.0"
+  description: "Apply governed ROADMAP status transitions after convergence."
+  author: "Local Governance"
+  license: "MIT"
+
+requires:
+  speckit_version: ">=0.16.2,<0.17.0"
+
+provides:
+  commands:
+    - name: "speckit.greenfield-roadmap-lifecycle.complete"
+      file: "commands/speckit.greenfield-roadmap-lifecycle.complete.md"
+      description: "Complete a governed Feature and reassess direct dependents."
+    - name: "speckit.greenfield-roadmap-lifecycle.verify"
+      file: "commands/speckit.greenfield-roadmap-lifecycle.verify.md"
+      description: "Verify completion without mutating ROADMAP."
+  config:
+    - name: "greenfield-roadmap-lifecycle-config.yml"
+      template: "config-template.yml"
+      description: "Completion authority and repository-native approval location."
+      required: false
+
+hooks:
+  after_converge:
+    command: "speckit.greenfield-roadmap-lifecycle.complete"
+    priority: 20
+    optional: false
+    description: "Apply ROADMAP completion only after clean governed convergence."
+
+tags:
+  - "greenfield"
+  - "roadmap"
+  - "governance"

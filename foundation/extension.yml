@@ -1,0 +1,29 @@
+schema_version: "1.0"
+
+extension:
+  id: "greenfield-foundation"
+  name: "Greenfield Foundation"
+  version: "0.1.0"
+  description: "Reusable Greenfield foundation procedures and governance-fact interfaces."
+  author: "Local Governance"
+  license: "MIT"
+
+requires:
+  speckit_version: ">=0.16.2,<0.17.0"
+
+provides:
+  commands:
+    - name: "speckit.greenfield-foundation.prd"
+      file: "commands/speckit.greenfield-foundation.prd.md"
+      description: "Review or reconcile the Canonical PRD."
+    - name: "speckit.greenfield-foundation.architecture"
+      file: "commands/speckit.greenfield-foundation.architecture.md"
+      description: "Derive and review the Draft Architecture Baseline."
+    - name: "speckit.greenfield-foundation.roadmap"
+      file: "commands/speckit.greenfield-foundation.roadmap.md"
+      description: "Publish the approved baseline and ROADMAP decomposition."
+    - name: "speckit.greenfield-foundation.project-ready"
+      file: "commands/speckit.greenfield-foundation.project-ready.md"
+      description: "Prepare the native Constitution and verify PROJECT READY."
+
+tags: ["greenfield", "governance"]
