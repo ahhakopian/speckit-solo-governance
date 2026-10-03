@@ -3,7 +3,7 @@ schema_version: "1.0"
 bundle:
   id: "speckit-greenfield-governance"
   name: "SpecKit Greenfield Governance"
-  version: "0.7.0"
+  version: "0.8.0"
   role: "distribution"
   description: "Native distribution and composition of Greenfield Governance components."
   author: "Local Governance"
@@ -15,7 +15,7 @@ requires:
 provides:
   extensions:
     - id: "greenfield-foundation"
-      version: "0.1.0"
+      version: "0.2.0"
     - id: "feature-governance-guard"
       version: "1.0.1"
     - id: "greenfield-roadmap-lifecycle"

@@ -51,10 +51,10 @@ specify preset add --dev ~/tools/speckit-greenfield-governance/preset --priority
 
 No bootstrap Workflow or Bundle is required for a repository-native caller.
 Existing bootstrap installations must install the new foundation Extension
-before updating the Workflow. Bundle 0.7.0 includes foundation 0.1.0, lifecycle
+before updating the Workflow. Bundle 0.8.0 includes foundation 0.2.0, lifecycle
 0.2.0, Greenfield preset 0.4.1 and bootstrap 0.5.0; Feature components remain
-1.0.1 and MVP remains independently installed. No source tag or release has
-been published by this change.
+1.0.1 and MVP remains independently installed. This source release is tagged
+`v0.8.0`.
 
 The evaluator accepts exactly one initial authorization source:
 
