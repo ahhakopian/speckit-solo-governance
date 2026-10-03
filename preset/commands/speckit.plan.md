@@ -6,6 +6,14 @@ evaluate the proposed design against the approved
 architecture responsibility and dependencies. Record exactly one architecture
 compatibility result: `COMPATIBLE` or `BASELINE_CHANGE_REQUIRED`.
 
+When `plan.md` already exists, read it and its applicable design artifacts
+before Core setup. Reconcile the current Feature's Plan/design in place against
+current approved governing inputs. Preserve existing Tasks, task IDs/completed
+markers, implementation and evidence; Plan reconciliation does not authorize
+regenerating or deleting them. Retain applicable design decisions, revising
+only what the current authorities require. All shaping and compatibility
+checks below still apply.
+
 Use `COMPATIBLE` only when the design preserves the Canonical PRD, conforms to
 the approved baseline, remains within the ROADMAP entry, respects its declared
 dependencies, and introduces no unapproved material architecture decision.

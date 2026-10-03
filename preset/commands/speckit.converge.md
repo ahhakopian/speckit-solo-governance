@@ -56,8 +56,17 @@ modify ROADMAP in this command: the Greenfield-owned mandatory hook evaluates
 completion from current artifacts, its own current compatibility check, and
 fresh installed governance reviews.
 
+For `tasks_appended`, the mandatory hook returns without clean-completion
+verification and leaves the Feature active. Return control to the caller so
+the changed task set goes through governed Tasks reconciliation, its mandatory
+Guard, approval, Readiness and implementation again. Do not continue to Human
+Acceptance or Complete. Preserve all existing task IDs and completion markers,
+implementation and evidence; Core's append-only corrective-task contract applies.
+
 Completion verification is reusable and does not mutate ROADMAP. With explicit
 `completion_mode: human`, the hook leaves the Feature active for Human
-Acceptance; only separately authorized completion applies DONE. Automatic
+Acceptance when current acceptance is missing or stale. Current acceptance
+allows the hook to return without another acceptance stop; only separately
+authorized completion applies DONE. Automatic
 completion remains the default. All compatibility and UX/UI conditions above
 remain unchanged in either mode.

@@ -51,10 +51,10 @@ specify preset add --dev ~/tools/speckit-greenfield-governance/preset --priority
 
 No bootstrap Workflow or Bundle is required for a repository-native caller.
 Existing bootstrap installations must install the new foundation Extension
-before updating the Workflow. Bundle 0.8.0 includes foundation 0.2.0, lifecycle
-0.2.0, Greenfield preset 0.4.1 and bootstrap 0.5.0; Feature components remain
+before updating the Workflow. Bundle 0.8.1 includes foundation 0.2.0, lifecycle
+0.2.1, Greenfield preset 0.4.2 and bootstrap 0.5.0; Feature components remain
 1.0.1 and MVP remains independently installed. This source release is tagged
-`v0.8.0`.
+`v0.8.1`.
 
 The evaluator accepts exactly one initial authorization source:
 
@@ -82,8 +82,12 @@ retains automatic behavior. Invalid configuration blocks completion. In human
 mode, Feature start also checks current native Project Ready authorization.
 
 `speckit.greenfield-roadmap-lifecycle.verify` performs existing acceptance and
-governance checks without ROADMAP mutation. The mandatory completion hook calls
-it in both modes. Human mode leaves the Feature active; after Human Acceptance,
+governance checks without ROADMAP mutation. For clean convergence the mandatory
+completion hook calls it in both modes. A native `tasks_appended` outcome returns
+without clean-completion verification and leaves the Feature active for the
+caller's governed task/review/implementation routing. Human mode leaves the
+Feature active; the hook requests the acceptance boundary only when current
+acceptance is missing or stale. After current Human Acceptance,
 invoke `speckit.greenfield-roadmap-lifecycle.complete` with `operation=complete`.
 It repeats verification and the evaluator itself requires current acceptance,
 including when called directly. There is no bypass flag. The script's `verify`
@@ -97,6 +101,13 @@ rendered UX/UI evidence and review obligations are unchanged. Optional
 `speckit.checklist` is applicability-driven; a native caller introduces no
 checklist gate or checklist-skipped state. Specify's quality checklist remains
 part of its existing contract.
+
+Specify also permits the narrow same-active-entry, same-linked-Spec
+reconciliation case using the explicit existing native Feature directory.
+It preserves lifecycle identity and downstream artifacts; done entries and
+different/new links remain excluded. Existing Plan and Tasks reconciliation
+preserves implementation/evidence and applicable task IDs/completion markers.
+No approval or stage-completion record is inferred from reconciliation.
 
 ## Regression checks
 

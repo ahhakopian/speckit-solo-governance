@@ -168,6 +168,36 @@ class RoadmapLifecycleTests(TestCase):
         with self.assertRaisesRegex(lifecycle.LifecycleError, "checklist"):
             self.start(spec=name)
 
+    def test_same_active_rm02_spec_reconciliation_preserves_link_and_downstream_work(self):
+        self.write(row("RM-01", status="done") + row("RM-02", status="ready", deps="RM-01"))
+        name = self.spec("RM-02")
+        self.start("RM-02", name)
+        folder = (self.project / name).parent
+        (folder / "spec.md").write_text("ROADMAP entry: RM-02\nReconciled local behavior.\n")
+        (folder / "tasks.md").write_text("- [x] T001 Existing work\n- [ ] T002 Remaining work\n")
+        (folder / "plan.md").write_text("Existing Plan.\n")
+        before = {p.relative_to(self.project): p.read_bytes() for p in self.project.rglob("*") if p.is_file()}
+        result = self.start("RM-02", name)
+        self.assertEqual(result, {"action": "start", "id": "RM-02", "changed": False, "status": "active"})
+        self.assertEqual(before, {p.relative_to(self.project): p.read_bytes()
+                                  for p in self.project.rglob("*") if p.is_file()})
+
+    def test_active_reconciliation_cannot_change_entry_link_or_reopen_done(self):
+        self.initial()
+        name = self.spec()
+        self.start(spec=name)
+        for feature, link in (("RM-01", "specs/new/spec.md"), ("RM-02", name), ("RM-99", name)):
+            with self.subTest(feature=feature, link=link):
+                before = self.roadmap.read_bytes()
+                with self.assertRaises(lifecycle.LifecycleError):
+                    self.start(feature, link)
+                self.assertEqual(self.roadmap.read_bytes(), before)
+        self.write(self.roadmap.read_text().replace("Status: active", "Status: done"))
+        before = self.roadmap.read_bytes()
+        with self.assertRaisesRegex(lifecycle.LifecycleError, "ready status"):
+            self.start(spec=name)
+        self.assertEqual(self.roadmap.read_bytes(), before)
+
     def test_incomplete_tasks_prevent_done(self) -> None:
         self.initial(); self.start(); self.tasks("- [ ] T001 Finish feature\n")
         with self.assertRaisesRegex(lifecycle.LifecycleError, "incomplete tasks"):
@@ -429,6 +459,92 @@ class NativeLifecycleTests(FactFixture, TestCase):
         self.assertTrue(result["changed"])
         self.assertEqual((self.status(), self.status("RM-02")), ("done", "ready"))
         self.assertFalse(lifecycle.apply(self.project, self.arguments())["changed"])
+
+    def test_tasks_appended_hook_skips_clean_verification_in_both_modes(self):
+        self.active_feature()
+        self.write("specs/RM-01/tasks.md", "- [x] T001 Implement A\n- [ ] T002 Correct convergence finding\n")
+        for human in (False, True):
+            with self.subTest(human=human):
+                if human:
+                    self.human_mode()
+                before = {p.relative_to(self.project): p.read_bytes()
+                          for p in self.project.rglob("*") if p.is_file()}
+                args = lifecycle.parser().parse_args(["hook", "RM-01", "--converge", "tasks_appended"])
+                with patch.object(lifecycle, "verify_completion") as verify:
+                    result = lifecycle.apply(self.project, args)
+                    verify.assert_not_called()
+                self.assertEqual(result, {"action": "hook", "id": "RM-01", "changed": False,
+                                          "status": "active", "converge": "tasks_appended"})
+                self.assertEqual(before, {p.relative_to(self.project): p.read_bytes()
+                                         for p in self.project.rglob("*") if p.is_file()})
+                # Explicit Complete still rejects this non-clean outcome.
+                complete_args = self.arguments()
+                complete_args.converge = "tasks_appended"
+                self.assertIn("clean converge", lifecycle.apply(self.project, complete_args)["blockers"])
+                self.assertEqual(self.status(), "active")
+
+    def test_current_acceptance_hook_verifies_without_another_acceptance_stop(self):
+        self.human_mode()
+        self.active_feature()
+        self.approve("human-acceptance", "RM-01", self.spec, ["evidence/result.txt"])
+        self.save()
+        before = (self.project / "ROADMAP.md").read_bytes()
+        with patch.object(lifecycle, "verify_completion", wraps=lifecycle.verify_completion) as verify:
+            result = lifecycle.apply(self.project, self.arguments("hook"))
+            verify.assert_called_once()
+        self.assertTrue(result["ready_for_acceptance"])
+        self.assertFalse(result["human_acceptance_required"])
+        self.assertEqual((self.project / "ROADMAP.md").read_bytes(), before)
+        self.assertEqual(lifecycle.apply(self.project, self.arguments())["status"], "done")
+
+    def test_missing_or_stale_acceptance_hook_still_requires_acceptance_and_blocks_complete(self):
+        self.human_mode()
+        self.active_feature()
+        for stale in (False, True):
+            with self.subTest(stale=stale):
+                if stale:
+                    self.approve("human-acceptance", "RM-01", self.spec, ["evidence/result.txt"])
+                    self.save()
+                    self.write("src/service.py", "Changed implementation.\n")
+                before = (self.project / "ROADMAP.md").read_bytes()
+                result = lifecycle.apply(self.project, self.arguments("hook"))
+                self.assertTrue(result["human_acceptance_required"])
+                with self.assertRaisesRegex(ValueError, "human-acceptance"):
+                    lifecycle.apply(self.project, self.arguments())
+                self.assertEqual((self.project / "ROADMAP.md").read_bytes(), before)
+
+    def test_current_acceptance_hook_cannot_replace_completion_checks_or_evidence(self):
+        self.human_mode()
+        self.active_feature()
+        self.write("evidence/extra.txt", "Additional current verification.\n")
+        self.approve("human-acceptance", "RM-01", self.spec, ["evidence/result.txt"])
+        self.save()
+        for field in ("converge", "compatibility", "feature_after_tasks", "feature_before_implement",
+                      "mvp_before_implement", "mvp_after_implement", "verification", "blockers"):
+            with self.subTest(field=field):
+                args = self.arguments("hook")
+                setattr(args, field, "unknown")
+                result = lifecycle.apply(self.project, args)
+                self.assertTrue(result["blockers"])
+                self.assertNotIn("human_acceptance_required", result)
+                self.assertEqual(self.status(), "active")
+        args = self.arguments("hook")
+        args.evidence.append("evidence/extra.txt")
+        self.assertTrue(lifecycle.apply(self.project, args)["human_acceptance_required"])
+        args.action = "complete"
+        with self.assertRaisesRegex(ValueError, "required verification evidence"):
+            lifecycle.apply(self.project, args)
+
+    def test_automatic_clean_hook_retains_existing_completion(self):
+        self.active_feature()
+        self.assertEqual(lifecycle.apply(self.project, self.arguments("hook"))["status"], "done")
+
+    def test_automatic_hook_cannot_bypass_human_mode_selected_before_write(self):
+        self.active_feature()
+        before = (self.project / "ROADMAP.md").read_bytes()
+        with self.assertRaisesRegex(ValueError, "human-acceptance"):
+            lifecycle.apply(self.project, self.arguments("hook"), before_write=self.human_mode)
+        self.assertEqual((self.project / "ROADMAP.md").read_bytes(), before)
 
     def test_stale_acceptance_and_changes_before_write_cannot_complete(self):
         self.human_mode()

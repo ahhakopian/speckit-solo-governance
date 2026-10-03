@@ -3,7 +3,7 @@ schema_version: "1.0"
 extension:
   id: "greenfield-roadmap-lifecycle"
   name: "Greenfield ROADMAP Lifecycle"
-  version: "0.2.0"
+  version: "0.2.1"
   description: "Apply governed ROADMAP status transitions after convergence."
   author: "Local Governance"
   license: "MIT"

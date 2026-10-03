@@ -322,7 +322,11 @@ authorization source MUST NOT fall back to another source. After approval, Green
 evaluate all planned entries and promote only those with satisfied
 prerequisites and no blocker. It MUST preserve `blocked` and `deferred` entries.
 Successful `specify` links exactly one ready entry to its spec and sets it
-`active`. Clean, compatible governed completion sets that active entry `done`,
+`active`. Reconciliation may update only that same active entry's uniquely
+linked existing Spec in its existing native Feature directory, with ordinary
+Spec quality validation. It preserves status, identity and downstream work;
+it MUST NOT allocate another Feature/link, reset progress, or reopen `done`.
+Clean, compatible governed completion sets that active entry `done`,
 then Greenfield reassesses only its direct ROADMAP dependents. A dependency
 becoming done alone does not override
 an explicit extra start requirement or governance blocker. Routine derived
@@ -387,6 +391,12 @@ belongs in the ROADMAP.
 Only a ready, unblocked ROADMAP entry may enter the ordinary SpecKit Feature
 lifecycle. The `greenfield-bootstrap` Workflow ends at `PROJECT READY` and MUST
 NOT orchestrate Feature work.
+
+The same-active-entry Specify reconciliation exception above is an in-place
+update within the existing lifecycle, not entry into a new Feature. Existing
+Plan/Tasks reconciliation MUST preserve implementation and evidence; Tasks
+MUST retain IDs and completed markers for applicable work without resetting
+progress. All existing authority, design and Guard requirements still apply.
 
 The governed Feature lifecycle is:
 
@@ -578,9 +588,14 @@ No second governance guard and no additional `after_tasks` or
 The final architecture compatibility check is part of governed convergence.
 Native `converge` may write only to `tasks.md`, so the Greenfield-owned
 mandatory `after_converge` hook calls reusable completion verification after
-the command reports a clean outcome. In default automatic mode it then applies
+the command reports a clean outcome. On `tasks_appended`, it MUST instead leave
+the Feature active and return control for governed task/review/implementation
+routing, without clean-completion verification or acceptance. In default
+automatic mode clean convergence then applies
 the ROADMAP completion transition. In explicit human-authorized mode it leaves
-the Feature active for Human Acceptance; a separate completion invocation MUST
+the Feature active and requests the Human Acceptance boundary only when current
+acceptance is missing or stale. Current acceptance lets the hook return without
+another acceptance stop; a separate completion invocation MUST
 require current acceptance of the Feature authorities, implementation and
 verification evidence before DONE. Direct evaluator invocation MUST enforce
 the same requirement. Verification itself MUST NOT mutate ROADMAP.

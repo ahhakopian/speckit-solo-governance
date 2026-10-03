@@ -6,6 +6,15 @@ user-facing surface or interaction. Read applicable project `DESIGN.md` rules,
 the Feature's `spec.md` and `plan.md`, and
 `specs/<feature>/ux-design.md` when present.
 
+When `tasks.md` already exists, read the current task set before task generation
+and reconcile it in place against the current approved Plan/UX. Preserve task
+IDs for still-applicable work and preserve their completed checkbox markers;
+do not renumber existing tasks or reset progress. Retain completed-work records
+when a changed requirement supersedes them, and add new corrective work as
+new unchecked tasks with unused IDs. Preserve implementation and evidence.
+Core's mandatory `after_tasks` Feature Governance Guard must still run on the
+reconciled task set before Tasks / Guard HITL; reconciliation grants no approval.
+
 If the material change requires a new UX decision, treat the required
 `ux-design.md` as Feature-local design authority. If it is missing, STOP task
 generation and route the Feature back to Plan/UX shaping; do not invent the

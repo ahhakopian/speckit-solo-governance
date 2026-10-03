@@ -12,14 +12,28 @@ the approved architecture, ROADMAP structure, ordering or dependencies.
 1. Read effective configuration with
    `python3 .specify/extensions/greenfield-roadmap-lifecycle/scripts/roadmap_lifecycle.py config`.
    Invalid configuration blocks completion; do not substitute automatic mode.
+   For `operation=hook`, read the native Converge outcome from this active
+   response before invoking completion verification. If it is `tasks_appended`,
+   invoke `roadmap_lifecycle.py hook <ID> --converge tasks_appended` using the
+   installed script path above, report its unchanged active result, and return
+   control to the caller's repository-derived task routing. Do not invoke the
+   clean-completion verifier, request acceptance, or execute Complete on this
+   branch. Missing/uncertain outcomes block; only `converged` continues below.
+   Explicit `operation=complete` still requires clean convergence and all checks.
 2. Invoke the installed `speckit.greenfield-roadmap-lifecycle.verify` command
    using the normal agent invocation. Require its current successful result
    (`ready_for_acceptance: true`) and retain its flags/evidence only in this active response. Never synthesize
    PASS from an earlier approval or a clean Converge message alone.
-3. When `completion_mode` is `human` and operation is `hook`, stop after
-   successful verification with `HUMAN ACCEPTANCE REQUIRED`. ROADMAP remains
-   active. The caller owns the prescribed Human Acceptance boundary. Do not
-   request another approval from this hook and do not write an approval fact.
+3. For operation `hook`, invoke the installed evaluator's `hook <ID>` with
+   precisely the verifier's current flags and evidence. In human mode it
+   repeats the clean-completion checks and validates current Human Acceptance
+   against that evidence. If `human_acceptance_required` is true, report
+   `HUMAN ACCEPTANCE REQUIRED` to the caller's prescribed boundary. If false,
+   return the verified result without another acceptance stop so the caller
+   can invoke separately authorized `operation=complete`. ROADMAP remains
+   active in either human-mode case. Do not request approval or write a fact
+   from this hook. In automatic mode this operation applies existing completion.
+   Report its result and end this hook invocation.
 4. Otherwise invoke
    `python3 .specify/extensions/greenfield-roadmap-lifecycle/scripts/roadmap_lifecycle.py complete <ID>`
    with precisely the verifier's current flags and evidence paths. The script

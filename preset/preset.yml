@@ -3,7 +3,7 @@ schema_version: "1.0"
 preset:
   id: "greenfield-governance"
   name: "Greenfield Governance"
-  version: "0.4.1"
+  version: "0.4.2"
   description: "Greenfield governance command addenda, including conditional UX/UI governance."
   author: "Local Governance"
   license: "MIT"

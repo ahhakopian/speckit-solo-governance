@@ -268,6 +268,16 @@ def transition(roadmap: Roadmap, project: Path, args: argparse.Namespace) -> dic
         raise LifecycleError(f"Unknown ROADMAP ID: {args.feature_id}")
     entry = roadmap.entries[args.feature_id]
 
+    if args.action == "hook" and args.converge == "tasks_appended":
+        lifecycle_config(project)  # invalid configuration never falls back to completion
+        if entry.fields["Status"] != "active":
+            raise LifecycleError(f"{entry.id}: corrective tasks require active status")
+        spec = safe_project_file(project, entry.fields["Feature spec"])
+        if SPEC_ID.findall(spec.read_text(encoding="utf-8")) != [entry.id]:
+            raise LifecycleError(f"{entry.id}: linked spec must identify exactly this ROADMAP entry")
+        return {"action": "hook", "id": entry.id, "changed": False,
+                "status": "active", "converge": "tasks_appended"}
+
     if args.action == "start":
         config = lifecycle_config(project)
         if config["completion_mode"] == "human":
@@ -297,13 +307,21 @@ def transition(roadmap: Roadmap, project: Path, args: argparse.Namespace) -> dic
         roadmap._set(entry, "Status reason", "specify completed")
         return {"action": "start", "id": entry.id, "changed": True, "status": "active"}
 
-    if args.action == "complete" and entry.fields["Status"] == "done":
+    if args.action in {"complete", "hook"} and entry.fields["Status"] == "done":
         require_human_acceptance(project, entry, args.evidence)
         return {"action": "complete", "id": entry.id, "changed": False, "status": "done", "dependents": []}
     result = verify_completion(roadmap, project, args)
     result["action"] = args.action
     if result.get("blockers") or args.action == "verify":
         return result
+    if args.action == "hook" and lifecycle_config(project)["completion_mode"] == "human":
+        try:
+            require_human_acceptance(project, entry, args.evidence)
+        except ValueError:
+            result["human_acceptance_required"] = True
+        else:
+            result["human_acceptance_required"] = False
+        return result  # even current acceptance leaves mutation to explicit complete
     require_human_acceptance(project, entry, args.evidence)
     roadmap._set(entry, "Status", "done")
     roadmap._set(entry, "Status reason", "governed Feature completion passed")
@@ -316,7 +334,8 @@ def transition(roadmap: Roadmap, project: Path, args: argparse.Namespace) -> dic
 def apply(project: Path, args: argparse.Namespace, *, before_write=None) -> dict:
     if args.action == "config":
         return lifecycle_config(project)
-    if args.action == "verify":
+    if args.action == "verify" or (args.action == "hook" and (
+            args.converge == "tasks_appended" or lifecycle_config(project)["completion_mode"] == "human")):
         # Verification is read-only, including no lifecycle lock/temp files.
         roadmap = Roadmap((project / "ROADMAP.md").read_text(encoding="utf-8"))
         return transition(roadmap, project, args)
@@ -369,7 +388,7 @@ def recheck_authorization(project: Path, roadmap: Roadmap, args: argparse.Namesp
         config = lifecycle_config(project)
         if config["completion_mode"] == "human":
             require_native_project_ready(project, config["approval_registry"])
-    elif args.action == "complete":
+    elif args.action in {"complete", "hook"}:
         require_human_acceptance(project, roadmap.entries[args.feature_id], args.evidence)
 
 
@@ -384,7 +403,7 @@ def parser() -> argparse.ArgumentParser:
     start = actions.add_parser("start")
     start.add_argument("feature_id")
     start.add_argument("spec")
-    for action in ("verify", "complete"):
+    for action in ("verify", "complete", "hook"):
         check = actions.add_parser(action)
         check.add_argument("feature_id")
         check.add_argument("--converge", default="unknown")
