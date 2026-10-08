@@ -51,10 +51,10 @@ specify preset add --dev ~/tools/speckit-greenfield-governance/preset --priority
 
 No bootstrap Workflow or Bundle is required for a repository-native caller.
 Existing bootstrap installations must install the new foundation Extension
-before updating the Workflow. Bundle 0.8.1 includes foundation 0.2.0, lifecycle
-0.2.1, Greenfield preset 0.4.2 and bootstrap 0.5.0; Feature components remain
+before updating the Workflow. Bundle 0.9.0 includes foundation 0.2.0, lifecycle
+0.3.0, Greenfield preset 0.4.2 and bootstrap 0.5.0; Feature components remain
 1.0.1 and MVP remains independently installed. This source release is tagged
-`v0.8.1`.
+`v0.9.0`.
 
 The evaluator accepts exactly one initial authorization source:
 
@@ -244,6 +244,13 @@ required Feature-local design. No UX review report is required. This overlay
 adds no UX/UI extension, hook, workflow, command, or aggregator.
 
 ## Installation from GitHub
+
+Verification Platform is optional for installation and upgrades. Existing
+nonverification workflows remain operational without it. Current applicable
+verification obligations require their pinned resources at their proof boundary;
+an unrelated project binding or justified non-applicability adds no dependency.
+This integration supports [Verification Platform](https://github.com/ahhakopian/verification-platform)
+release `v0.1.0`.
 
 For repository-native Solo use, clone this repository and install its existing
 Foundation Extension, ROADMAP Lifecycle Extension, and Greenfield Preset into

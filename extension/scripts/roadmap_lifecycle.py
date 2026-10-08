@@ -12,6 +12,7 @@ import json
 import os
 import re
 import sys
+import subprocess
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,6 +27,25 @@ STATUSES = {"planned", "ready", "active", "blocked", "deferred", "done"}
 
 class LifecycleError(ValueError):
     pass
+
+
+def verification_disposition(text: str, has_proof: bool) -> str | None:
+    """Project-owned adoption classification; never resolves optional platform code."""
+    sections = re.findall(r"(?ms)^## Verification Integration[^\S\n]*\n(.*?)(?=^## |\Z)", text)
+    if not sections and not has_proof:
+        return None  # Preserve existing unadopted features.
+    if len(sections) != 1:
+        raise LifecycleError("Verification Plan reconciliation required: exactly one applicability section required")
+    values = re.findall(r"(?mi)^Applicability:[ \t]*(.*?)[ \t]*$", sections[0])
+    if len(values) != 1 or values[0].lower() not in {"applicable", "not applicable"}:
+        raise LifecycleError("Verification Plan reconciliation required: exactly one valid applicability required")
+    disposition = values[0].lower()
+    if disposition == "not applicable":
+        if not re.search(r"(?mi)^Reason:[ \t]*\S[^\n]*$", sections[0]):
+            raise LifecycleError("Verification Plan reconciliation required: missing non-applicability reason")
+        if has_proof:
+            raise LifecycleError("Verification Plan reconciliation required: contradictory proof artifact")
+    return disposition
 
 
 @dataclass
@@ -246,6 +266,61 @@ def verify_completion(roadmap: Roadmap, project: Path, args: argparse.Namespace)
         raise LifecycleError("Required verification evidence was not identified")
     for relative in args.evidence:
         safe_project_file(project, relative)
+    proof_plan = spec.parent / "browser-verification-plan.json"
+    plan_path = spec.parent / "plan.md"
+    plan_text = plan_path.read_text(encoding="utf-8") if plan_path.is_file() else ""
+    disposition = verification_disposition(plan_text, proof_plan.is_file())
+    if disposition == "applicable" and not proof_plan.is_file():
+        raise LifecycleError("Applicable feature verification is blocked: browser-verification-plan.json is missing")
+    if proof_plan.is_file():
+        # Transient ordinary platform result-validation invocation, not a
+        # persisted handoff registry or another lifecycle/approval category.
+        entrypoint = os.environ.get("VERIFICATION_PLATFORM_RESULT_VALIDATOR")
+        request_json = os.environ.get("VERIFICATION_PLATFORM_RESULT_REQUEST")
+        if not entrypoint or not request_json:
+            raise LifecycleError("Required current platform result validation is unavailable")
+        try:
+            request = json.loads(request_json)
+            request["planBytes"] = proof_plan.read_text(encoding="utf-8")
+            request["binding"] = json.loads(safe_project_file(project, ".verification/platform.json").read_text(encoding="utf-8"))
+            request["projectRoot"] = str(project.resolve())
+            supplied = [safe_project_file(project, path) for path in args.evidence]
+            published = []
+            for path in supplied:
+                try:
+                    published.append(json.loads(path.read_text(encoding="utf-8")))
+                except (ValueError, UnicodeDecodeError):
+                    pass
+            if request["result"] not in published or request["manifest"] not in published:
+                raise ValueError("Current result and complete manifest must be published evidence inputs")
+            if ".verification/platform.json" not in args.evidence:
+                raise ValueError("Current neutral binding must be an explicit evidence/acceptance input")
+            # The platform owns proof adequacy. The process adapter owns stable
+            # publication and the existing explicit acceptance input boundary.
+            required_ids = {evidence_id for claim in request["result"].get("claims", [])
+                            for evidence_id in claim["evidenceIds"]}
+            envelopes = {item["evidenceId"]: item for item in request.get("evidence", [])}
+            for evidence_id in required_ids:
+                envelope = envelopes[evidence_id]
+                if envelope not in published:
+                    raise ValueError("Required evidence envelope must be a published acceptance input: " + evidence_id)
+                attachment = (Path(request["outputRoot"]) / envelope["attachment"]["path"]).resolve()
+                if attachment not in supplied:
+                    raise ValueError("Required evidence attachment must be a published acceptance input: " + evidence_id)
+            for record in request.get("records", []):
+                if record not in published:
+                    raise ValueError("Current claim records must be published acceptance inputs")
+            for config in request["assignment"]["providers"]:
+                if not Path(config["entry"]).is_absolute():
+                    safe_project_file(project, config["entry"])
+                elif not Path(config["entry"]).is_file():
+                    raise ValueError("Required provider support is not delivered")
+            result = subprocess.run(["node", entrypoint], input=json.dumps(request), capture_output=True, text=True, timeout=30)
+            report = json.loads(result.stdout)
+            if result.returncode or report.get("valid") is not True or report.get("verdict") != "PASS":
+                raise ValueError("Required proof cannot become verification PASS: " + json.dumps(report))
+        except (ValueError, KeyError, TypeError, AttributeError, OSError, subprocess.TimeoutExpired) as exc:
+            raise LifecycleError("Platform verification blocked: " + str(exc)) from exc
     if roadmap.readiness(entry, project):
         raise LifecycleError(f"{entry.id}: dependencies or start requirements are no longer satisfied")
     return {"action": "verify", "id": entry.id, "changed": False,

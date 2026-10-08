@@ -53,3 +53,26 @@ Converge outcome is missing, BLOCK and tell the caller to invoke existing
 Converge before retrying; do not invoke it from this verification command,
 because automatic completion hooks may mutate ROADMAP. Do not recover a stored
 stage result. Required UX/UI checks remain mandatory.
+
+For an adopted applicable feature, read its canonical
+`browser-verification-plan.json` and the installed Feature Governance
+verification integration policy. Reuse valid current proof or invoke the
+installed `verification-orchestrator` from the existing verification task with
+feature/ROADMAP identity and current approvals checked by this adapter. Supply
+the normal explicit assignment/fixture/provider configuration and exact plan
+and neutral binding digests; missing compiler/runtime/support is BLOCKED.
+Before `--verification PASS`, invoke the platform's shared current-result
+validator with current result/manifest/mandatory evidence/records, assignment,
+resource resolution and generated source bytes. Preserve human proof and
+actual delivered support. `VERIFICATION_PLATFORM_RESULT_VALIDATOR` selects
+the matching installed result CLI and `VERIFICATION_PLATFORM_RESULT_REQUEST`
+supplies this transient normal invocation JSON; no handoff registry is created.
+The evaluator replaces its plan/binding inputs from the linked current feature,
+requires published result/manifest and explicit `.verification/platform.json`
+evidence. Publish current claim records, accepted evidence envelopes and all
+their raw attachments as explicit project-relative evidence/acceptance inputs;
+transient external output cannot satisfy this boundary. Malformed/contradictory
+applicability and unjustified non-applicability require Plan reconciliation.
+The evaluator refuses unresolved/stale/incomplete proof. Existing flags,
+guard order and Human Acceptance authority remain unchanged. Completed features
+are not adopted or audited automatically.

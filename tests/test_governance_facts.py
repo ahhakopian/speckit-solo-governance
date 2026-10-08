@@ -148,9 +148,12 @@ class GovernanceFactTests(FactFixture, TestCase):
 
     def test_acceptance_binds_evidence_and_entire_implementation(self):
         self.feature()
+        self.write("specs/RM-01/browser-verification-plan.json", '{"plan":"current"}\n')
+        self.write(".verification/platform.json", '{"binding":"current"}\n')
         self.approve("human-acceptance", "RM-01", self.spec, ["evidence/result.txt"])
         facts.require_approval(self.project, self.data, "human-acceptance", "RM-01", spec=self.spec, evidence=["evidence/result.txt"])
-        for path in ("src/service.py", "evidence/result.txt", "specs/RM-01/plan.md"):
+        for path in ("src/service.py", "evidence/result.txt", "specs/RM-01/plan.md",
+                     "specs/RM-01/browser-verification-plan.json", ".verification/platform.json"):
             original = (self.project / path).read_text()
             self.write(path, original + "changed\n")
             with self.assertRaisesRegex(facts.FactError, "Stale human-acceptance"):
