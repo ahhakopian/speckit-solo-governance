@@ -1,5 +1,6 @@
 """Process adapter contract fixtures; no real release/adoption or acceptance."""
 import json
+import os
 import shutil
 import subprocess
 from argparse import Namespace
@@ -93,10 +94,12 @@ class PlatformCompletionTests(TestCase):
             run.assert_not_called()
 
     def test_real_platform_result_validation_binds_current_proof_and_published_evidence(self):
-        platform = Path(__file__).resolve().parents[2] / "verification-platform"
-        fixture = subprocess.run(["node", "--input-type=module", "-e",
-            "import {currentResultFixture} from './tests/fixtures/current-result.mjs'; console.log(JSON.stringify(currentResultFixture()))"],
-            cwd=platform, capture_output=True, text=True, check=True)
+        platform = Path(os.environ["VERIFICATION_PLATFORM_DISTRIBUTION"]).resolve()
+        fixture_builder = Path(__file__).resolve().parent / "fixtures/published-platform-result.mjs"
+        script = (f'import {{currentPublishedResultFixture}} from {json.dumps(fixture_builder.as_uri())}; '
+                  f'console.log(JSON.stringify(await currentPublishedResultFixture({json.dumps(str(platform))})))')
+        fixture = subprocess.run(["node", "--input-type=module", "-e", script],
+            cwd=Path(__file__).resolve().parents[1], capture_output=True, text=True, check=True)
         request = json.loads(fixture.stdout)
         original = Path(request["projectRoot"])
         self.addCleanup(shutil.rmtree, original)
@@ -104,7 +107,6 @@ class PlatformCompletionTests(TestCase):
         shutil.copytree(original, snapshot)
         for name in ("projectRoot", "sourceRoot", "outputRoot"):
             request[name] = str(snapshot)
-        request["resolution"]["root"] = str(snapshot)
         (self.folder / "browser-verification-plan.json").write_text(request["planBytes"])
         (self.project / ".verification/platform.json").write_text(json.dumps(request["binding"]))
         (self.folder / "result.json").write_text(json.dumps(request["result"]))
